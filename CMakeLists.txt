@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 2.8)
 project(Kalman CXX)
 
+#mfc
+set(BUILD_TESTING 0)
+
 # TODO: Use VERSION argument to project command after raising the minimum
 # cmake version to 3.0
 set(PROJECT_VERSION_MAJOR 0)
@@ -58,6 +61,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DEIGEN_NO_DEBUG")
 # Examples
 if(KALMAN_BUILD_EXAMPLES)
   add_executable(example_robot1 "examples/Robot1/main.cpp")
+  add_executable(example_steps "examples/Steps/main.cpp")
 endif()
 
 # Unit Tests
