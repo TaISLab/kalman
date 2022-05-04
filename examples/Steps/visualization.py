@@ -14,7 +14,7 @@ z_e = df.a_e * np.sin(df.p_e)
 
 plt.plot(z, label='real')
 #plt.plot(z0, label='state')
-#plt.plot(z_u, label='unscent')
+plt.plot(z_u, label='unscent')
 plt.plot(z_e, label='extended')
 
 plt.legend()
