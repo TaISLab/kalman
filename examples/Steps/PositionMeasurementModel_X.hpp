@@ -72,6 +72,8 @@ public:
 
 protected:
     
+    static constexpr T dosPi = 2.0 * M_PI;
+    
     /**
      * @brief Update jacobian matrices for the system state transition function using current state
      *
@@ -92,8 +94,8 @@ protected:
         this->H.setZero();
         
         this->H( M::POS, S::A ) = std::sin(x.p());
-        this->H( M::POS, S::F ) = 0;
-        this->H( M::POS, S::P ) = x.a() * std::cos(x.p());;
+        this->H( M::POS, S::F ) = dosPi * x.a() * std::cos(x.p()) ;
+        this->H( M::POS, S::P ) = x.a() * std::cos(x.p());
         
     }    
 

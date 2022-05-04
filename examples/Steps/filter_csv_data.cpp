@@ -5,16 +5,21 @@
 #include <cmath>
 
 
-#include "SystemModelLeg.hpp"
-#include "PositionMeasurementModelLeg.hpp"
+#include "SystemModel_X.hpp"
+#include "PositionMeasurementModel_X.hpp"
 
 #include <kalman/ExtendedKalmanFilter.hpp>
 #include <kalman/UnscentedKalmanFilter.hpp>
+#include <csv.h>
+#include <stdio.h>
 
 #include <iostream>
 #include <random>
 #include <chrono>
 #include <cmath>
+
+
+using namespace KalmanExamples;
 
 typedef float T;
 
@@ -29,15 +34,23 @@ typedef Leg::PositionMeasurementModel<T> PositionModel;
 
 int main(int argc, char** argv)
 {
+
+  io::CSVReader<3> in("laser_data.csv");
+  in.read_header(io::ignore_extra_column, "laser_x", "laser_y", "time" );
+  double laser_x, laser_y, time;
+  while(in.read_row(laser_x, laser_y, time)){
+    // do stuff with the data
+    printf ("floats: %4.2f %4.2f %4.8f \n", laser_x, laser_y, time);
+  }
+
+  printf ("Done reading");
+  return 0;
+
     // Simulated (true) system initial state
     State x0;
-    x0.a_x() = 0.5;   // meters
-    x0.f_x() = 0.75;  // hertzs
-    x0.p_x() = 0;     // rads
-
-    x0.a_y() = 0.1;   // meters
-    x0.f_y() = 0.05;  // hertzs
-    x0.p_y() = 0;     // rads
+    x0.a() = 0.5;   // meters
+    x0.f() = 0.75;  // hertzs
+    x0.p() = 0;     // rads
     
     // simulation parameters 
     T dosPi = 2.0 * M_PI;
@@ -81,41 +94,29 @@ int main(int argc, char** argv)
     const size_t N = 500;
     const size_t V = 20;
 
-    std::cout   << "a_r_x" << "," << "f_r_x" << "," << "p_r_x" << "," << "z_x" << ","
-                << "a_e_x" << "," << "f_e_x" << "," << "p_e_x" << ","
-                << "a_u_x" << "," << "f_u_x" << "," << "p_u_x" << ","
-                << "a_r_y" << "," << "f_r_y" << "," << "p_r_y" << "," << "z_y" << ","
-                << "a_e_y" << "," << "f_e_y" << "," << "p_e_y" << ","
-                << "a_u_y" << "," << "f_u_y" << "," << "p_u_y"                
-                << std::endl;
+    std::cout   << "a_r" << "," << "f_r" << "," << "p_r" << "," << "z" << ","
+                << "a_e" << "," << "f_e" << "," << "p_e" << ","
+                << "a_u" << "," << "f_u" << "," << "p_u"
+                    << std::endl;
 
     for(size_t i = 1; i <= N; i++)
     {
         // Control input
-        u.dt() = T(V/(N*x0.f_x())); //seconds
+        u.dt() = T(V/(N*x0.f())); //seconds
         
         // Simulate system
         x = sys.f(x, u);
         
         // Add noise: Our robot move is affected by noise (due to actuator failures)
-        x.a_x() += amplitudeNoise*noise(generator);
-        x.f_x() += frequencyNoise*noise(generator);
-        x.a_y() += amplitudeNoise*noise(generator);
-        x.f_y() += frequencyNoise*noise(generator);
-
-
+        x.a() += amplitudeNoise*noise(generator);
+        x.f() += frequencyNoise*noise(generator);
         // wrapping phase ...
-        auto angle = x.p_x() + phaseNoise*noise(generator);
+        auto angle = x.p() + phaseNoise*noise(generator);
         angle = fmod(angle, dosPi);
         if ( angle < 0)
             angle += dosPi;
-        x.p_x() = angle;
+        x.p() = angle;
 
-        angle = x.p_y() + phaseNoise*noise(generator);
-        angle = fmod(angle, dosPi);
-        if ( angle < 0)
-            angle += dosPi;
-        x.p_y() = angle;
 
         // Predict state for current time-step using the filters
         auto x_ukf = ukf.predict(sys, u);        
@@ -125,8 +126,7 @@ int main(int argc, char** argv)
         PositionMeasurement position = pm.h(x);
         
         // Measurement is affected by noise as well
-        position.pos_x() += measureNoise * noise(generator);
-        position.pos_y() += measureNoise * noise(generator);        
+        position.pos() += measureNoise * noise(generator);
                     
         // Update UKF
         x_ukf = ukf.update(pm, position);    
@@ -134,12 +134,9 @@ int main(int argc, char** argv)
         x_ekf = ekf.update(pm, position);
 
         // Print to stdout as csv format
-        std::cout   <<     x.a_x() << "," <<     x.f_x() << "," <<     x.p_x()  << "," << position.pos_x() << ","
-                    << x_ekf.a_x() << "," << x_ekf.f_x() << "," << x_ekf.p_x()  << ","
-                    << x_ukf.a_x() << "," << x_ukf.f_x() << "," << x_ukf.p_x()  << ","
-                    <<     x.a_y() << "," <<     x.f_y() << "," <<     x.p_y()  << "," << position.pos_y() << ","
-                    << x_ekf.a_y() << "," << x_ekf.f_y() << "," << x_ekf.p_y()  << ","
-                    << x_ukf.a_y() << "," << x_ukf.f_y() << "," << x_ukf.p_y()                    
+        std::cout   << x.a()     << "," << x.f()     << "," << x.p() << "," << position.pos() << ","
+                    << x_ekf.x() << "," << x_ekf.f() << "," << x_ekf.p()  << ","
+                    << x_ukf.a() << "," << x_ukf.f() << "," << x_ukf.p()
                     << std::endl;
     }
     

@@ -4,8 +4,6 @@
 #include <kalman/LinearizedSystemModel.hpp>
 #include <cmath>
 
-namespace KalmanExamples
-{
 namespace Leg
 {
 
@@ -22,25 +20,39 @@ namespace Leg
  * @param T Numeric scalar type
  */
 template<typename T>
-class State : public Kalman::Vector<T, 3>
+class State : public Kalman::Vector<T, 6>
 {
 public:
-    KALMAN_VECTOR(State, T, 3)
+    KALMAN_VECTOR(State, T, 6)
     
     //! Amplitude
-    static constexpr size_t A = 0;
+    static constexpr size_t AX = 0;
     //! Frequency
-    static constexpr size_t F = 1;
+    static constexpr size_t FX = 1;
     //! Absolute phase
-    static constexpr size_t P = 2;
+    static constexpr size_t PX = 2;
+
+    //! Amplitude
+    static constexpr size_t AY = 3;
+    //! Frequency
+    static constexpr size_t FY = 4;
+    //! Absolute phase
+    static constexpr size_t PY = 5;
+
+
+    T a_x()       const { return (*this)[ AX ]; }
+    T f_x()       const { return (*this)[ FX ]; }
+    T p_x()       const { return (*this)[ PX ]; }
+    T a_y()       const { return (*this)[ AY ]; }
+    T f_y()       const { return (*this)[ FY ]; }
+    T p_y()       const { return (*this)[ PY ]; }
     
-    T a()       const { return (*this)[ A ]; }
-    T f()       const { return (*this)[ F ]; }
-    T p()       const { return (*this)[ P ]; }
-    
-    T& a()      { return (*this)[ A ]; }
-    T& f()      { return (*this)[ F ]; }
-    T& p()      { return (*this)[ P ]; }    
+    T& a_x()      { return (*this)[ AX ]; }
+    T& f_x()      { return (*this)[ FX ]; }
+    T& p_x()      { return (*this)[ PX ]; }     
+    T& a_y()      { return (*this)[ AY ]; }
+    T& f_y()      { return (*this)[ FY ]; }
+    T& p_y()      { return (*this)[ PY ]; }    
 
 };
 
@@ -80,10 +92,10 @@ class SystemModel : public Kalman::LinearizedSystemModel<State<T>, Control<T>, C
 {
 public:
     //! State type shortcut definition
-	typedef KalmanExamples::Leg::State<T> S;
+	typedef Leg::State<T> S;
     
     //! Control type shortcut definition
-    typedef KalmanExamples::Leg::Control<T> C;
+    typedef Leg::Control<T> C;
     
     /**
      * @brief Definition of (non-linear) state transition function
@@ -102,15 +114,23 @@ public:
         //! Predicted state vector after transition
         S x_new_;
                 
-        x_new_.a() = x.a();
-        x_new_.f() = x.f();
+        x_new_.a_x() = x.a_x();
+        x_new_.f_x() = x.f_x();
+        x_new_.a_y() = x.a_y();
+        x_new_.f_y() = x.f_y();
 
         // Only absolute phase changes in new state and non-lineally
-        auto angle = x.p() + ( dosPi * x.f() * u.dt() );
+        auto angle = x.p_x() + ( dosPi * x.f_x() * u.dt() );
         angle = fmod(angle, dosPi);
         if ( angle < 0)
             angle += dosPi;
-        x_new_.p() = angle;
+        x_new_.p_x() = angle;
+
+        angle = x.p_y() + ( dosPi * x.f_y() * u.dt() );
+        angle = fmod(angle, dosPi);
+        if ( angle < 0)
+            angle += dosPi;
+        x_new_.p_y() = angle;
 
         // Return transitioned state vector
         return x_new_;
@@ -140,21 +160,34 @@ protected:
     {
         this->F.setZero();
         
-        // f(a,f,p) = [f_a, f_f, f_p]
-        // F(a,f,p) = [ [df_a/da, df_a/df, df_a/dp ], [df_f/da, df_f/df, df_f/dp ], [df_p/da, df_p/df, df_p/dp ] ]
+        // f(a_x,f_x,p_x,a_y,f_y,p_y) = [f_a_x, f_f_x, f_p_x, f_a_y, f_f_y, f_p_y]
+        // F(a_x,f_x,p_x,a_y,f_y,p_y) = [ [df_a_x/da_x, df_a_x/df_x, df_a_x/dp_x, df_a_x/da_y, df_a_x/df_y, df_a_x/dp_y ], 
+        //                                [df_f_x/da_x, df_f_x/df_x, df_f_x/dp_x, df_f_x/da_y, df_f_x/df_y, df_f_x/dp_y ], 
+        //                                [df_p_x/da_x, df_p_x/df_x, df_p_x/dp_x, df_p_x/da_y, df_p_x/df_y, df_p_x/dp_y ], 
+        //                                [df_a_y/da_x, df_a_y/df_x, df_a_y/dp_x, df_a_y/da_y, df_a_y/df_y, df_a_y/dp_y ], 
+        //                                [df_f_y/da_x, df_f_y/df_x, df_f_y/dp_x, df_f_y/da_y, df_f_y/df_y, df_f_y/dp_y ], 
+        //                                [df_p_y/da_x, df_p_y/df_x, df_p_y/dp_x, df_p_y/da_y, df_p_y/df_y, df_p_y/dp_y ]  ]
 
-        this->F( S::A, S::A ) = 1;
-        //this->F( S::A, S::F ) = 0;
-        //this->F( S::A, S::P ) = 0;
 
-        //this->F( S::F, S::A ) = 0;
-        this->F( S::F, S::F ) = 1;
-        //this->F( S::F, S::P ) = 0;
+          this->F( S::AX, S::AX ) = 1;
+        //this->F( S::AX, S::FX ) = 0;
+        //this->F( S::AX, S::PX ) = 0;
+        //this->F( S::FX, S::AX ) = 0;
+          this->F( S::FX, S::FX ) = 1;
+        //this->F( S::FX, S::PX ) = 0;
+        //this->F( S::PX, S::AX ) = 0;
+          this->F( S::PX, S::FX ) = dosPi * u.dt();
+          this->F( S::PX, S::PX ) = 1;
 
-        //this->F( S::P, S::A ) = 0;
-        this->F( S::P, S::F ) = dosPi * u.dt();
-        this->F( S::P, S::P ) = 1;
-
+          this->F( S::AY, S::AY ) = 1;
+        //this->F( S::AY, S::FY ) = 0;
+        //this->F( S::AY, S::PY ) = 0;
+        //this->F( S::FY, S::AY ) = 0;
+          this->F( S::FY, S::FY ) = 1;
+        //this->F( S::FY, S::PY ) = 0;
+        //this->F( S::PY, S::AY ) = 0;
+          this->F( S::PY, S::FY ) = dosPi * u.dt();
+          this->F( S::PY, S::PY ) = 1;
 
         // W = df/dw (Jacobian of state transition w.r.t. the noise)
 
@@ -169,6 +202,5 @@ protected:
 };
 
 } // namespace Leg
-} // namespace KalmanExamples
 
 #endif

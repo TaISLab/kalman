@@ -4,8 +4,6 @@
 #include <kalman/LinearizedMeasurementModel.hpp>
 #include <cmath>
 
-namespace KalmanExamples
-{
 namespace Leg
 {
 
@@ -15,16 +13,19 @@ namespace Leg
  * @param T Numeric scalar type
  */
 template<typename T>
-class PositionMeasurement : public Kalman::Vector<T, 1>
+class PositionMeasurement : public Kalman::Vector<T, 2>
 {
 public:
-    KALMAN_VECTOR(PositionMeasurement, T, 1)
+    KALMAN_VECTOR(PositionMeasurement, T, 2)
     
     //! current measured position
-    static constexpr size_t POS = 0;
+    static constexpr size_t POSX = 0;
+    static constexpr size_t POSY = 1;
         
-    T  pos()       const { return (*this)[ POS ]; }
-    T& pos()      { return (*this)[ POS ]; }
+    T  pos_x()       const { return (*this)[ POSX ]; }
+    T  pos_y()       const { return (*this)[ POSY ]; }
+    T& pos_x()             { return (*this)[ POSX ]; }
+    T& pos_y()             { return (*this)[ POSY ]; }
 };
 
 /**
@@ -46,10 +47,10 @@ class PositionMeasurementModel : public Kalman::LinearizedMeasurementModel<State
 {
 public:
     //! State type shortcut definition
-    typedef  KalmanExamples::Leg::State<T> S;
+    typedef  Leg::State<T> S;
     
     //! Measurement type shortcut definition
-    typedef  KalmanExamples::Leg::PositionMeasurement<T> M;
+    typedef  Leg::PositionMeasurement<T> M;
     
     
     /**
@@ -65,7 +66,8 @@ public:
     M h(const S& x) const
     {
         M measurement;        
-        measurement.pos() = x.a() * std::sin(x.p());
+        measurement.pos_x() = x.a_x() * std::sin(x.p_x());
+        measurement.pos_y() = x.a_y() * std::sin(x.p_y());
       
         return measurement;
     }
@@ -93,15 +95,18 @@ protected:
         // H = dh/dx (Jacobian of measurement function w.r.t. the state)
         this->H.setZero();
         
-        this->H( M::POS, S::A ) = std::sin(x.p());
-        this->H( M::POS, S::F ) = dosPi * x.a() * std::cos(x.p()) ;
-        this->H( M::POS, S::P ) = x.a() * std::cos(x.p());
-        
+        this->H( M::POSX, S::AX ) = std::sin(x.p_x());
+        this->H( M::POSX, S::FX ) = dosPi * x.a_x() * std::cos(x.p_x()) ;
+        this->H( M::POSX, S::PX ) = x.a_x() * std::cos(x.p_x());
+
+        this->H( M::POSY, S::AY ) = std::sin(x.p_y());
+        this->H( M::POSY, S::FY ) = dosPi * x.a_y() * std::cos(x.p_y()) ;
+        this->H( M::POSY, S::PY ) = x.a_y() * std::cos(x.p_y());
+
     }    
 
 };
 
 } // namespace Leg
-} // namespace KalmanExamples
 
 #endif

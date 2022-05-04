@@ -13,6 +13,10 @@ set(PROJECT_VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_
 
 include(CTest)
 
+# mfc: needed for csv reader
+find_package( Threads REQUIRED )
+message(${CMAKE_THREAD_LIBS_INIT}) #pthread library found?
+
 set(KALMAN_CXX_FLAGS "-std=c++11")
 
 option(KALMAN_BUILD_EXAMPLES "Build the Kalman examples" ON)
@@ -62,6 +66,11 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DEIGEN_NO_DEBUG")
 if(KALMAN_BUILD_EXAMPLES)
   add_executable(example_robot1 "examples/Robot1/main.cpp")
   add_executable(example_steps "examples/Steps/main.cpp")
+  add_executable(filter_csv_data "examples/Steps/filter_csv_data.cpp")
+  
+  # mfc: needed for csv reader
+  target_link_libraries(filter_csv_data ${CMAKE_THREAD_LIBS_INIT})
+
 endif()
 
 # Unit Tests
