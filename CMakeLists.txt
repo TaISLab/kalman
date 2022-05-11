@@ -89,14 +89,6 @@ set(TESTS
     test/Matrix.cpp
 )
 
-if(BUILD_TESTING)
-  enable_testing()
-  add_subdirectory("external/googletest")
-  include_directories("external/googletest/include")
-  add_executable(kalman_test ${TESTS} ${HEADERS})
-  target_link_libraries(kalman_test PRIVATE gtest gtest_main)
-  add_test(Kalman kalman_test)
-endif()
 
 #
 # Install/Uninstall support
