@@ -46,6 +46,7 @@ int main(int argc, char** argv)
     // System initial state
     State x0;
 
+    x0.d() = 0.01;   // meters
     x0.a() = 0.15;   // meters
     x0.f() = 0.75;  // hertzs
     x0.p() = 0;     // rads
@@ -75,9 +76,9 @@ int main(int argc, char** argv)
     // discard first line
     std::getline(infile, line);
 
-    std::cout << "a_e_x" << "," << "f_e_x" << "," << "p_e_x" << ","
-              << "a_u_x" << "," << "f_u_x" << "," << "p_u_x" << ","
-              << "z_x"   << "," << "z_e_x" << "," << "z_u_x" << std::endl;
+    std::cout << "d_e_x" << "," << "a_e_x" << "," << "f_e_x" << "," << "p_e_x" << ","
+              << "d_u_x" << "," << "a_u_x" << "," << "f_u_x" << "," << "p_u_x" << ","
+              << "z_x"   << "," << "z_e_x" << "," << "z_u_x" << "," << "dt"    << std::endl;
 
     while (std::getline(infile, line)) {
       is_valid = false;
@@ -122,8 +123,8 @@ int main(int argc, char** argv)
       PositionMeasurement estimated_position_e = pm.h(x_ekf);
 
       // Print to stdout as csv format
-      std::cout << x_ekf.a() << "," << x_ekf.f() << "," << x_ekf.p() << ","
-                << x_ukf.a() << "," << x_ukf.f() << "," << x_ukf.p() << ",";
+      std::cout << x_ekf.d() << "," << x_ekf.a() << "," << x_ekf.f() << "," << x_ekf.p() << ","
+                << x_ukf.d() << "," << x_ukf.a() << "," << x_ukf.f() << "," << x_ukf.p() << ",";
 
 
       // print readings 
@@ -133,7 +134,7 @@ int main(int argc, char** argv)
         std::cout   << "NaN";
       }
       
-      std::cout  <<  "," << estimated_position_e.pos()   << "," << estimated_position_u.pos() << std::endl;
+      std::cout  <<  "," << estimated_position_e.pos()   << "," << estimated_position_u.pos() << "," << u.dt() << std::endl;
                         
     }
     

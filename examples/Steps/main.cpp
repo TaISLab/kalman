@@ -31,10 +31,13 @@ int main(int argc, char** argv)
 {
     // Simulated (true) system initial state
     State x0;
+    
+    x0.d_x() = 0.85;   // meters
     x0.a_x() = 0.5;   // meters
     x0.f_x() = 0.75;  // hertzs
     x0.p_x() = 0;     // rads
 
+    x0.d_y() = 0.18;   // meters
     x0.a_y() = 0.1;   // meters
     x0.f_y() = 0.05;  // hertzs
     x0.p_y() = 0;     // rads
@@ -43,6 +46,8 @@ int main(int argc, char** argv)
     T dosPi = 2.0 * M_PI;
     // Standard-Deviation of noise added to amplitude during state transition
     T amplitudeNoise = 0.1;
+    // Standard-Deviation of noise added to amplitude during state transition
+    T offsetNoise = 0.1;    
     // Standard-Deviation of noise added to frequency during state transition
     T frequencyNoise = 0.01;
     // Standard-Deviation of noise added to phase during state transition
@@ -81,12 +86,12 @@ int main(int argc, char** argv)
     const size_t N = 500;
     const size_t V = 20;
 
-    std::cout   << "a_r_x" << "," << "f_r_x" << "," << "p_r_x" << "," << "z_x" << ","
-                << "a_e_x" << "," << "f_e_x" << "," << "p_e_x" << ","
-                << "a_u_x" << "," << "f_u_x" << "," << "p_u_x" << ","
-                << "a_r_y" << "," << "f_r_y" << "," << "p_r_y" << "," << "z_y" << ","
-                << "a_e_y" << "," << "f_e_y" << "," << "p_e_y" << ","
-                << "a_u_y" << "," << "f_u_y" << "," << "p_u_y"                
+    std::cout   << "a_r_x" << "," << "d_r_x" << "," << "f_r_x" << "," << "p_r_x" << "," << "z_x" << ","
+                << "a_e_x" << "," << "d_e_x" << "," << "f_e_x" << "," << "p_e_x" << ","
+                << "a_u_x" << "," << "d_u_x" << "," << "f_u_x" << "," << "p_u_x" << ","
+                << "a_r_y" << "," << "d_r_y" << "," << "f_r_y" << "," << "p_r_y" << "," << "z_y" << ","
+                << "a_e_y" << "," << "d_e_y" << "," << "f_e_y" << "," << "p_e_y" << ","
+                << "a_u_y" << "," << "d_u_y" << "," << "f_u_y" << "," << "p_u_y"                
                 << std::endl;
 
     for(size_t i = 1; i <= N; i++)
@@ -98,11 +103,13 @@ int main(int argc, char** argv)
         x = sys.f(x, u);
         
         // Add noise: Our robot move is affected by noise (due to actuator failures)
+        x.d_x() += offsetNoise*noise(generator);
         x.a_x() += amplitudeNoise*noise(generator);
         x.f_x() += frequencyNoise*noise(generator);
+
+        x.d_y() += offsetNoise*noise(generator);
         x.a_y() += amplitudeNoise*noise(generator);
         x.f_y() += frequencyNoise*noise(generator);
-
 
         // wrapping phase ...
         auto angle = x.p_x() + phaseNoise*noise(generator);
@@ -134,12 +141,12 @@ int main(int argc, char** argv)
         x_ekf = ekf.update(pm, position);
 
         // Print to stdout as csv format
-        std::cout   <<     x.a_x() << "," <<     x.f_x() << "," <<     x.p_x()  << "," << position.pos_x() << ","
-                    << x_ekf.a_x() << "," << x_ekf.f_x() << "," << x_ekf.p_x()  << ","
-                    << x_ukf.a_x() << "," << x_ukf.f_x() << "," << x_ukf.p_x()  << ","
-                    <<     x.a_y() << "," <<     x.f_y() << "," <<     x.p_y()  << "," << position.pos_y() << ","
-                    << x_ekf.a_y() << "," << x_ekf.f_y() << "," << x_ekf.p_y()  << ","
-                    << x_ukf.a_y() << "," << x_ukf.f_y() << "," << x_ukf.p_y()                    
+        std::cout   <<     x.a_x() << "," <<     x.d_x() << "," <<     x.f_x() << "," <<     x.p_x()  << "," << position.pos_x() << ","
+                    << x_ekf.a_x() << "," << x_ekf.d_x() << "," << x_ekf.f_x() << "," << x_ekf.p_x()  << ","
+                    << x_ukf.a_x() << "," << x_ukf.d_x() << "," << x_ukf.f_x() << "," << x_ukf.p_x()  << ","
+                    <<     x.a_y() << "," <<     x.d_y() << "," <<     x.f_y() << "," <<     x.p_y()  << "," << position.pos_y() << ","
+                    << x_ekf.a_y() << "," << x_ekf.d_y() << "," << x_ekf.f_y() << "," << x_ekf.p_y()  << ","
+                    << x_ukf.a_y() << "," << x_ukf.d_y() << "," << x_ukf.f_y() << "," << x_ukf.p_y()                    
                     << std::endl;
     }
     

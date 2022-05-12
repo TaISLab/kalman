@@ -13,19 +13,19 @@ namespace Leg
  * @brief System state vector-type for a leg in swinging in 1D (a sine with unknown freq, amp and phase, basically)
  *
  * System is characterized by its swing amplitude, angular speed and phase:
- *            z_k = a_k * sin(2*pi* f_k*t_k + phi) = a_k sin(p_k)
+ *            z_k = d_k + a_k * sin(2*pi* f_k*t_k + phi) = a_k sin(p_k)
  *                     measurement = z_k  = h(k) 
- *                           state = x_k  = [a_k  f_k  p_k] = f(x_k-1,u_k-1)
+ *                           state = x_k  = [d_k a_k  f_k  p_k] = f(x_k-1,u_k-1)
  *                         control = u_k  = t_k+1 - t_k
- *                    f(x_k,u_k)   = [a_k  f_k  p_k + 2*pi*u_k]
+ *                    f(x_k,u_k)   = [d_k a_k  f_k  p_k + 2*pi*u_k]
  *
  * @param T Numeric scalar type
  */
 template<typename T>
-class State : public Kalman::Vector<T, 3>
+class State : public Kalman::Vector<T, 4>
 {
 public:
-    KALMAN_VECTOR(State, T, 3)
+    KALMAN_VECTOR(State, T, 4)
     
     //! Amplitude
     static constexpr size_t A = 0;
@@ -33,14 +33,18 @@ public:
     static constexpr size_t F = 1;
     //! Absolute phase
     static constexpr size_t P = 2;
+    //! Absolute phase
+    static constexpr size_t D = 3;
     
     T a()       const { return (*this)[ A ]; }
     T f()       const { return (*this)[ F ]; }
     T p()       const { return (*this)[ P ]; }
+    T d()       const { return (*this)[ D ]; }
     
     T& a()      { return (*this)[ A ]; }
     T& f()      { return (*this)[ F ]; }
     T& p()      { return (*this)[ P ]; }    
+    T& d()      { return (*this)[ D ]; }
 
 };
 
@@ -104,6 +108,7 @@ public:
                 
         x_new_.a() = x.a();
         x_new_.f() = x.f();
+        x_new_.d() = x.d();
 
         // Only absolute phase changes in new state and non-lineally
         auto angle = x.p() + ( dosPi * x.f() * u.dt() );
@@ -140,21 +145,31 @@ protected:
     {
         this->F.setZero();
         
-        // f(a,f,p) = [f_a, f_f, f_p]
-        // F(a,f,p) = [ [df_a/da, df_a/df, df_a/dp ], [df_f/da, df_f/df, df_f/dp ], [df_p/da, df_p/df, df_p/dp ] ]
+        // f(a,f,p) =   [f_a,         f_f,     f_p,      f_d]
+        // F(a,f,p) = [ [df_a/da, df_a/df, df_a/dp, df_a/dd ], 
+        //              [df_f/da, df_f/df, df_f/dp, df_f/dd ], 
+        //              [df_p/da, df_p/df, df_p/dp, df_p/dd ],
+        //              [df_d/da, df_d/df, df_d/dp, df_d/dd ] ]
 
         this->F( S::A, S::A ) = 1;
         //this->F( S::A, S::F ) = 0;
         //this->F( S::A, S::P ) = 0;
+        //this->F( S::A, S::D ) = 0;
 
         //this->F( S::F, S::A ) = 0;
         this->F( S::F, S::F ) = 1;
         //this->F( S::F, S::P ) = 0;
+        //this->F( S::F, S::D ) = 0;
 
         //this->F( S::P, S::A ) = 0;
         this->F( S::P, S::F ) = dosPi * u.dt();
         this->F( S::P, S::P ) = 1;
+        //this->F( S::P, S::D ) = 0;
 
+        //this->F( S::D, S::A ) = 0;
+        //this->F( S::D, S::F ) = 0;
+        //this->F( S::D, S::P ) = 0;
+        this->F( S::D, S::D ) = 1;
 
         // W = df/dw (Jacobian of state transition w.r.t. the noise)
 

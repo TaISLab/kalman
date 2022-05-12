@@ -65,7 +65,7 @@ public:
     M h(const S& x) const
     {
         M measurement;        
-        measurement.pos() = x.a() * std::sin(x.p());
+        measurement.pos() = x.d() + x.a() * std::sin(x.p());
       
         return measurement;
     }
@@ -90,12 +90,13 @@ protected:
      */
     void updateJacobians( const S& x )
     {
-        // H = dh/dx (Jacobian of measurement function w.r.t. the state)
+        // H = d/ds * h(s) = [dh/da, dh/df, dh/dp, dh/dd] (Jacobian of measurement function w.r.t. the state)
         this->H.setZero();
         
         this->H( M::POS, S::A ) = std::sin(x.p());
         this->H( M::POS, S::F ) = dosPi * x.a() * std::cos(x.p()) ;
         this->H( M::POS, S::P ) = x.a() * std::cos(x.p());
+        this->H( M::POS, S::D ) = 1;
         
     }    
 
