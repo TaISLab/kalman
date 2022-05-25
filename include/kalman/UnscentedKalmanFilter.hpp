@@ -25,6 +25,10 @@
 #include "UnscentedKalmanFilterBase.hpp"
 #include "StandardFilterBase.hpp"
 
+#include <iostream>
+#include <eigen3/Eigen/Eigenvalues> 
+#include <eigen3/Eigen/Cholesky>
+
 namespace Kalman {
     
     /**
@@ -131,8 +135,71 @@ namespace Kalman {
             // Compute sigma points
             if(!computeSigmaPoints())
             {
-                // TODO: handle numerical error
-                assert(false);
+                //std::cout << "Can't compute sigma points for prediction in unscented kalman filter" << std::endl;
+                // A well known trick of forcing to be zero the negative eigenvalues, as suggested in
+                //           GREWAL, M. S.; ANDREWS, A. P. Kalman Filtering: Theory and Practice: Using Matlab. New York, NY: John Wiley & Sons, 2001. 401 p. ISBN 0471392545.
+                //std::cout << "covariance" << std::endl;                
+                //std::cout << P << std::endl;
+                Eigen::EigenSolver<SquareMatrix<T, State::RowsAtCompileTime>> eigensolver(P);
+                Eigen::Matrix<std::complex<T>, State::RowsAtCompileTime, 1> eival = eigensolver.eigenvalues();                
+                Eigen::Matrix<std::complex<T>, State::RowsAtCompileTime, State::RowsAtCompileTime> eivec = eigensolver.eigenvectors();
+                Eigen::Matrix<std::complex<T>, State::RowsAtCompileTime, State::RowsAtCompileTime> eivecT = eivec.adjoint();
+
+                //std::cout << "Current eigenvalues" << std::endl;
+                //std::cout << eival << std::endl;
+                //std::cout << "Current eigenvectors" << std::endl;
+                //std::cout << eivec << std::endl;
+
+                // "correct" negative eigenvalues
+                for (int i = 0; i < eival.size(); ++i) {
+                    if (eival(i).real()<0)
+                        eival(i) =1e-6; // stupid numeric errors ...
+                }
+                Eigen::Matrix<std::complex<T>, State::RowsAtCompileTime, State::RowsAtCompileTime> eivalM = eival.matrix().asDiagonal();                
+                Eigen::Matrix<float, State::RowsAtCompileTime, State::RowsAtCompileTime> P2 = (eivec * eivalM *eivecT).real();
+
+                //std::cout << "New covariance" << std::endl;
+                //std::cout << P2 << std::endl;
+
+                //eigensolver.compute(P2);
+                //eival = eigensolver.eigenvalues();
+                //eivec = eigensolver.eigenvectors();
+                //std::cout << "new eigenvalues" << std::endl;
+                //std::cout << eival << std::endl;
+                //std::cout << "new eigenvectors" << std::endl;
+                //std::cout << eivec << std::endl;
+
+                P = P2;
+                if(!computeSigmaPoints()){
+                    std::cout << "Cholseky falla again" << std::endl;
+                    assert(false);
+                }
+
+                //Eigen::LDLT<SquareMatrix<T, State::RowsAtCompileTime>> ldlt;
+                //ldlt.compute(P);
+                //if(ldlt.info() != Eigen::Success){
+                //    std::cout << "ldlt fallo" << std::endl;
+                //}else {
+                    //std::cout << "ldlt conseguida:" << std::endl;
+                    //Eigen::Transpositions<State::RowsAtCompileTime,State::RowsAtCompileTime,int> P = ldlt.transpositionsP();
+                    //Eigen::Transpose<Eigen::TranspositionsBase<Eigen::Transpositions<State::RowsAtCompileTime, State::RowsAtCompileTime, int> > > Pt = P.inverse();
+                    //SquareMatrix<T, State::RowsAtCompileTime> L = ldlt.matrixL();
+                    //SquareMatrix<T, State::RowsAtCompileTime> D = ldlt.vectorD().asDiagonal();
+                    //SquareMatrix<T, State::RowsAtCompileTime> Lt = ldlt.matrixL().adjoint();
+                    //std::cout << "L:" << std::endl;
+                    //std::cout << L << std::endl<< std::endl;
+                    //std::cout << "D:" << std::endl;
+                    //Eigen::Diagonal<const Eigen::Matrix<T, State::RowsAtCompileTime, State::RowsAtCompileTime>, 0> vD = ldlt.vectorD();
+                    //for (int i = 0; i < vD.size(); ++i) {
+                    //    std::cout << vD(i) << std::endl;
+                    //}
+                    //std::cout << D << std::endl<< std::endl;
+                    //std::cout << "Cov == Pt*L*D*Lt*Pt " << std::endl;
+                    //std::cout << (Pt*L*D*Lt*Pt)<< std::endl<< std::endl;
+
+                
+                //} 
+
             }
             
             // Compute predicted state

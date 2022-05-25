@@ -66,6 +66,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DEIGEN_NO_DEBUG")
 if(KALMAN_BUILD_EXAMPLES)
   add_executable(example_robot1 "examples/Robot1/main.cpp")
   add_executable(example_steps "examples/Steps/main.cpp")
+  add_executable(force_steps "examples/ForceSteps/main.cpp")
   add_executable(filter_csv_data "examples/Steps/filter_csv_data.cpp")
   
   # mfc: needed for csv reader
